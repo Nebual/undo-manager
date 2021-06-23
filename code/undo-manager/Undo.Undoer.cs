@@ -1,5 +1,6 @@
 ﻿using Sandbox;
 using Sandbox.UI;
+using System;
 using System.Collections.Generic;
 
 namespace Sandbox
@@ -8,6 +9,19 @@ namespace Sandbox
 	{
 		private static Dictionary<ulong, List<Undo>> Undos = new Dictionary<ulong, List<Undo>>();
 
+		public static Undo Add( Client creator, Func<string> undoable )
+		{
+			if ( !Undos.ContainsKey( creator.SteamId ) )
+				Undos.Add( creator.SteamId, new List<Undo>() );
+
+			Undo undo = new Undo( creator ) {
+				Undoable = undoable
+			};
+
+			Undos[creator.SteamId].Insert( 0, undo );
+
+			return undo;
+		}
 		public static Undo Add( Client creator, Entity prop )
 		{
 			if ( !Undos.ContainsKey( creator.SteamId ) )
@@ -73,6 +87,12 @@ namespace Sandbox
 		public static void OnUndone()
 		{
 			ChatBox.AddChatEntry( "Undo", "Successfully Undone.", $"avatar:{Local.SteamId}" );
+		}
+
+		[ClientRpc]
+		public static void AddUndoPopup(string message)
+		{
+			ChatBox.AddChatEntry( "Undo", message, $"avatar:{Local.SteamId}" );
 		}
 	}
 }

@@ -1,4 +1,5 @@
-﻿using MinimalExtended;
+﻿using System;
+using MinimalExtended;
 using Sandbox;
 
 
@@ -11,6 +12,8 @@ namespace UndoManager
 		{
 			Sandbox.Hooks.Entities.OnSpawned -= OnSpawned;
 			Sandbox.Hooks.Entities.OnSpawned += OnSpawned;
+			Sandbox.Hooks.Undos.OnAddUndo -= OnAddUndo;
+			Sandbox.Hooks.Undos.OnAddUndo += OnAddUndo;
 		}
 
 		private void OnSpawned( Entity spawned, Entity owner )
@@ -18,6 +21,15 @@ namespace UndoManager
 			if ( owner is Player player ) {
 				if ( player.GetActiveController().Client is Client clientOwner ) {
 					Undoer.Add( clientOwner, spawned );
+				}
+			}
+		}
+
+		private void OnAddUndo( Func<string> undoable, Entity owner )
+		{
+			if ( owner is Player player ) {
+				if ( player.GetActiveController().Client is Client clientOwner ) {
+					Undoer.Add( clientOwner, undoable );
 				}
 			}
 		}
@@ -41,6 +53,18 @@ namespace UndoManager
 				float time = undo.Time;
 
 				if ( undo.Avoid ) continue;
+				if ( undo.Undoable != null ) {
+					var undoMessage = undo.Undoable();
+					Undoer.DoUndo( creator, null, undo );
+					if ( undoMessage != "" ) {
+						Undoer.AddUndoPopup( To.Single( creator ), undoMessage );
+						CreateUndoParticles( To.Single( creator ), Vector3.Zero );
+						break;
+					}
+					else {
+						continue; // this one wasn't needed, try another
+					}
+				}
 				if ( !prop.IsValid() ) {
 					Undoer.DoUndo( creator, prop, undo );
 
@@ -107,7 +131,9 @@ namespace UndoManager
 		public static void CreateUndoParticles( Vector3 pos )
 		{
 			using ( Prediction.Off() ) {
-				Particles.Create( "particles/physgun_freeze.vpcf", pos + Vector3.Up * 2 );
+				if ( pos != Vector3.Zero ) {
+					Particles.Create( "particles/physgun_freeze.vpcf", pos + Vector3.Up * 2 );
+				}
 				Local.Pawn?.PlaySound( HitSound.Name );
 			}
 		}
