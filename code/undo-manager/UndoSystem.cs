@@ -49,6 +49,11 @@ namespace UndoManager
 
 				CreateUndoParticles( To.Single( creator ), prop.Position );
 
+				if ( prop.GetType() != typeof( Prop ) ) {
+					Undoer.DoUndo( creator, prop, undo );
+					break;
+				}
+
 				Redo redo = Redoer.Add( creator, prop, undo );
 
 				undo.Avoid = true;
